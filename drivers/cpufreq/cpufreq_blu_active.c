@@ -120,6 +120,9 @@ static unsigned int max_freq_hysteresis;
 
 static bool io_is_busy;
 
+/* Don't scale frequency if load is bellow threshold */
+static unsigned int low_load_down_threshold = 10;
+
 /* Round to starting jiffy of next evaluation window */
 static u64 round_to_nw_start(u64 jif)
 {
@@ -272,7 +275,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 			if (new_freq < hispeed_freq)
 				new_freq = hispeed_freq;
 		}
-	} else if (cpu_load <= 5) {
+	} else if (cpu_load <= low_load_down_threshold) {
 		new_freq = pcpu->policy->cpuinfo.min_freq;
 	} else {
 		new_freq = pcpu->policy->min + cpu_load * (pcpu->policy->max - pcpu->policy->min) / 100;
@@ -899,6 +902,33 @@ static ssize_t store_io_is_busy(struct kobject *kobj,
 static struct global_attr io_is_busy_attr = __ATTR(io_is_busy, 0644,
 		show_io_is_busy, store_io_is_busy);
 
+static ssize_t show_low_load_down_threshold(struct kobject *kobj, struct attribute *attr,
+                                     char *buf)
+{
+	return sprintf(buf, "%d\n", low_load_down_threshold);
+}
+
+static ssize_t store_low_load_down_threshold(struct kobject *kobj, struct attribute *attr,
+                                      const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = strict_strtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+
+	if (val < 0 || val > 100)
+		low_load_down_threshold = low_load_down_threshold;
+	else
+		low_load_down_threshold = val;
+	
+	return count;
+}
+
+static struct global_attr low_load_down_threshold_attr = __ATTR(low_load_down_threshold, 0644,
+		show_low_load_down_threshold, store_low_load_down_threshold);
+
 static struct attribute *interactive_attributes[] = {
 	&above_hispeed_delay_attr.attr,
 	&hispeed_freq_attr.attr,
@@ -911,6 +941,7 @@ static struct attribute *interactive_attributes[] = {
 	&input_boost_freq_attr.attr,
 	&io_is_busy_attr.attr,
 	&max_freq_hysteresis_attr.attr,
+	&low_load_down_threshold_attr.attr,
 	NULL,
 };
 
