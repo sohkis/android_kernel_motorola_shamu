@@ -193,9 +193,7 @@ typedef enum dhd_pno_mode {
 #endif /* GSCAN_SUPPORT */
 struct dhd_pno_ssid {
 	bool		hidden;
-	int8		rssi_thresh;
-	uint8		dummy;
-	uint16		SSID_len;
+	uint32		SSID_len;
 	uchar		SSID[DOT11_MAX_SSID_LEN];
 	struct list_head list;
 };
